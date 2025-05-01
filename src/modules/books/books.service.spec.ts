@@ -16,6 +16,7 @@ describe('BooksService', () => {
     parent: null,
     children: [],
     books: [],
+    parentId: null,
   };
 
   const mockBook: Book = {
@@ -35,6 +36,10 @@ describe('BooksService', () => {
 
   const mockCategoriesService: Partial<CategoriesService> = {
     findOne: jest.fn().mockImplementation(() => Promise.resolve(mockCategory)),
+    findAllSubcategories: jest.fn().mockResolvedValue([mockCategory]),
+    findAll: jest.fn().mockResolvedValue([mockCategory]),
+    findAncestors: jest.fn().mockResolvedValue([mockCategory]),
+    getFullCategoryPath: jest.fn().mockResolvedValue([mockCategory]),
   };
 
   beforeAll(async () => {
@@ -100,25 +105,41 @@ describe('BooksService', () => {
   });
 
   describe('getBreadcrumb', () => {
-    it('should return correct breadcrumb for nested categories', () => {
+    it('should return correct breadcrumb for nested categories', async () => {
+      const parentCategory = {
+        id: '1',
+        name: 'MainCategory',
+        parent: null,
+        children: [],
+        books: [],
+        parentId: null,
+      };
+
+      const childCategory = {
+        id: '2',
+        name: 'SubCategory',
+        parent: parentCategory,
+        children: [],
+        books: [],
+        parentId: '1',
+      };
+
       const bookWithNestedCategory = {
         ...mockBook,
-        category: {
-          id: '2',
-          name: 'SubCategory',
-          parent: {
-            id: '1',
-            name: 'MainCategory',
-            parent: null,
-          },
-        },
+        category: childCategory,
       } as Book;
-      const result = service.getBreadcrumb(bookWithNestedCategory);
+
+      mockCategoriesService.findAncestors.mockResolvedValueOnce([
+        parentCategory,
+      ]);
+
+      const result = await service.getBreadcrumb(bookWithNestedCategory);
       expect(result).toBe('MainCategory > SubCategory');
     });
 
-    it('should return single category name for top-level category', () => {
-      const result = service.getBreadcrumb(mockBook);
+    it('should return single category name for top-level category', async () => {
+      mockCategoriesService.findAncestors.mockResolvedValueOnce([]);
+      const result = await service.getBreadcrumb(mockBook);
       expect(result).toBe('Test Category');
     });
   });

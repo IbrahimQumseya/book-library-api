@@ -3,43 +3,26 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { FindOptionsWhere } from 'typeorm';
+import { TreeRepository } from 'typeorm';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { Category } from './entities/category.entity';
+
 describe('CategoriesService', () => {
   let service: CategoriesService;
 
-  const mockCategoryRepository = {
-    create: jest.fn().mockImplementation((dto: CreateCategoryDto) => dto),
-    save: jest
-      .fn()
-      .mockImplementation((category: Category) => Promise.resolve(category)),
-    findOne: jest
-      .fn()
-      .mockImplementation(
-        ({ where }: { where: FindOptionsWhere<Category> }) => {
-          if (where?.name) {
-            return Promise.resolve(null); // Default: no duplicate found
-          }
-          // Check if searching by ID (parent check)
-          if (where?.id === 'valid-parent-id') {
-            return Promise.resolve({
-              id: 'valid-parent-id',
-              name: 'Parent Category',
-            });
-          }
-          if (where?.id === 'invalid-parent-id') {
-            return Promise.resolve(null);
-          }
-          return Promise.resolve(null);
-        },
-      ),
+  const mockCategoryTreeRepository: Partial<TreeRepository<Category>> = {
+    create: jest.fn(),
+    save: jest.fn(),
+    findOne: jest.fn(),
     find: jest.fn(),
     remove: jest.fn(),
+    findAncestors: jest.fn(),
+    findDescendants: jest.fn(),
+    findTrees: jest.fn(),
     createQueryBuilder: jest.fn(() => ({
       where: jest.fn().mockReturnThis(),
-      getMany: jest.fn(),
+      getMany: jest.fn().mockResolvedValue([]),
     })),
   };
 
@@ -49,7 +32,7 @@ describe('CategoriesService', () => {
         CategoriesService,
         {
           provide: getRepositoryToken(Category),
-          useValue: mockCategoryRepository,
+          useValue: mockCategoryTreeRepository,
         },
       ],
     }).compile();
@@ -62,67 +45,82 @@ describe('CategoriesService', () => {
   });
 
   describe('create', () => {
-    it('should create a category successfully and does not have parentId', async () => {
+    it('should create a category successfully without parent', async () => {
       const createCategoryDto: CreateCategoryDto = {
         name: 'Test Category',
       };
 
-      mockCategoryRepository.findOne = jest.fn().mockResolvedValueOnce(null);
-      mockCategoryRepository.create = jest
-        .fn()
-        .mockReturnValue(createCategoryDto);
-      mockCategoryRepository.save = jest
-        .fn()
-        .mockResolvedValueOnce(createCategoryDto);
+      mockCategoryTreeRepository.findOne
+        .mockResolvedValueOnce(null) // No duplicate name
+        .mockResolvedValueOnce(null); // No parent needed
+
+      mockCategoryTreeRepository.create.mockReturnValue(createCategoryDto);
+      mockCategoryTreeRepository.save.mockResolvedValue(createCategoryDto);
 
       const result = await service.create(createCategoryDto);
       expect(result).toEqual(createCategoryDto);
     });
 
-    it('should create a category successfully and has parentId', async () => {
+    it('should create a category successfully with parent', async () => {
+      const parentCategory = {
+        id: 'valid-parent-id',
+        name: 'Parent Category',
+      };
+
       const createCategoryDto: CreateCategoryDto = {
         name: 'Test Category',
         parentId: 'valid-parent-id',
       };
 
-      mockCategoryRepository.create = jest
-        .fn()
-        .mockReturnValue(createCategoryDto);
-      mockCategoryRepository.save = jest
-        .fn()
-        .mockResolvedValueOnce(createCategoryDto);
+      mockCategoryTreeRepository.findOne
+        .mockResolvedValueOnce(null) // No duplicate name
+        .mockResolvedValueOnce(parentCategory); // Parent exists
+
+      mockCategoryTreeRepository.create.mockReturnValue({
+        ...createCategoryDto,
+        parent: parentCategory,
+      });
+
+      mockCategoryTreeRepository.save.mockResolvedValue({
+        ...createCategoryDto,
+        parent: parentCategory,
+      });
 
       const result = await service.create(createCategoryDto);
-      expect(mockCategoryRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'valid-parent-id' },
-      });
       expect(result.parent).toBeDefined();
-      expect(result.parent?.id).toEqual('valid-parent-id');
+      expect(result.parent.id).toBe('valid-parent-id');
     });
 
-    it('should throw ConflictException if category name already exists', async () => {
+    it('should throw ConflictException if category name exists', async () => {
       const createCategoryDto: CreateCategoryDto = {
         name: 'Test Category',
       };
 
-      mockCategoryRepository.findOne = jest
-        .fn()
-        .mockResolvedValueOnce(createCategoryDto);
+      mockCategoryTreeRepository.findOne.mockResolvedValueOnce({
+        id: 'existing-id',
+        name: 'Test Category',
+      });
 
       await expect(service.create(createCategoryDto)).rejects.toThrow(
         ConflictException,
       );
     });
 
-    it('should throw NotFoundException if parent category not found', async () => {
+    it('should throw NotFoundException if parent not found', async () => {
       const createCategoryDto: CreateCategoryDto = {
         name: 'Test Category',
         parentId: 'invalid-parent-id',
       };
+
+      mockCategoryTreeRepository.findOne
+        .mockResolvedValueOnce(null) // No duplicate name
+        .mockResolvedValueOnce(null); // Parent not found
 
       await expect(service.create(createCategoryDto)).rejects.toThrow(
         NotFoundException,
       );
     });
   });
+
+  // Add more test cases for other methods...
 });

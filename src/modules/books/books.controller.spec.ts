@@ -17,25 +17,37 @@ describe('BooksController', () => {
     category: {
       id: '1',
       name: 'Test Category',
-      parent: null,
       books: [],
       children: [],
+      parent: null,
+      parentId: null,
     },
     categoryId: '1',
   };
 
   const mockBooks: Book[] = [mockBook];
 
-  const mockBooksService: Partial<BooksService> = {
+  const mockPaginatedResponse = {
+    items: mockBooks,
+    meta: {
+      page: 1,
+      limit: 10,
+      total: 1,
+      pageCount: 1,
+    },
+  };
+
+  const mockBooksService = {
     create: jest.fn(),
     findAll: jest.fn(),
     findOne: jest.fn(),
     getBreadcrumb: jest.fn(),
     update: jest.fn(),
     remove: jest.fn(),
+    findByCategoryWithPagination: jest.fn(),
   };
 
-  const mockCategoryService: Partial<CategoriesService> = {
+  const mockCategoryService = {
     findAll: jest.fn(),
     findOne: jest.fn(),
     create: jest.fn(),
@@ -47,8 +59,6 @@ describe('BooksController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [BooksController],
       providers: [
-        BooksService,
-        CategoriesService,
         {
           provide: BooksService,
           useValue: mockBooksService,
@@ -82,7 +92,7 @@ describe('BooksController', () => {
         categoryId: '1',
       };
 
-      mockBooksService.create = jest.fn().mockResolvedValueOnce(mockBook);
+      mockBooksService.create.mockResolvedValueOnce(mockBook);
 
       const result = await controller.create(createBookDto);
       expect(result).toEqual(mockBook);
@@ -94,60 +104,67 @@ describe('BooksController', () => {
         categoryId: '1',
       };
 
-      mockBooksService.create = jest
-        .fn()
-        .mockRejectedValueOnce(
-          new ConflictException('Book with this name already exists'),
-        );
+      mockBooksService.create.mockRejectedValueOnce(
+        new ConflictException('Book with this name already exists'),
+      );
 
       await expect(controller.create(createBookDto)).rejects.toThrow(
         ConflictException,
       );
     });
+  });
 
-    describe('findAll', () => {
-      it('should return an array of books', async () => {
-        mockBooksService.findAll = jest.fn().mockResolvedValue(mockBooks);
+  describe('findAll', () => {
+    it('should return a paginated list of books', async () => {
+      mockBooksService.findAll.mockResolvedValue(mockPaginatedResponse);
 
-        const result = await controller.findAll();
-
-        expect(result).toEqual(mockBooks);
-        expect(mockBooksService.findAll).toHaveBeenCalled();
+      const result = await controller.findAll({
+        limit: 10,
+        page: 1,
       });
 
-      it('should return an array of books by category', async () => {
-        mockBooksService.findByCategory = jest
-          .fn()
-          .mockResolvedValue(mockBooks);
-
-        const result = await controller.findAll('1');
-
-        expect(result).toEqual(mockBooks);
-        expect(mockBooksService.findByCategory).toHaveBeenCalledWith('1');
-      });
-    });
-
-    describe('findOne', () => {
-      it('should return a book by id', async () => {
-        mockBooksService.findOne = jest.fn().mockResolvedValue(mockBook);
-
-        const result = await controller.findOne('1');
-
-        expect(result).toEqual(mockBook);
-        expect(mockBooksService.findOne).toHaveBeenCalledWith('1');
-      });
-
-      it('should return a book by id with category breadcrumb', async () => {
-        mockBooksService.findOne = jest.fn().mockResolvedValue(mockBook);
-        mockBooksService.getBreadcrumb = jest
-          .fn()
-          .mockReturnValue('Test Breadcrumb');
-
-        const result = await controller.findOne('1');
-
-        expect(result).toEqual({ ...mockBook, breadcrumb: 'Test Breadcrumb' });
+      expect(result).toEqual(mockPaginatedResponse);
+      expect(mockBooksService.findAll).toHaveBeenCalledWith({
+        limit: 10,
+        page: 1,
       });
     });
   });
-  // Add more tests here...
+
+  describe('findByCategory', () => {
+    it('should return a paginated list of books by category', async () => {
+      mockBooksService.findByCategoryWithPagination.mockResolvedValue(
+        mockPaginatedResponse,
+      );
+
+      const result = await controller.findByCategory('1', {
+        limit: 10,
+        page: 1,
+      });
+
+      expect(result).toEqual(mockPaginatedResponse);
+      expect(
+        mockBooksService.findByCategoryWithPagination,
+      ).toHaveBeenCalledWith('1', {
+        limit: 10,
+        page: 1,
+      });
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return a book by id with breadcrumb', async () => {
+      mockBooksService.findOne.mockResolvedValue(mockBook);
+      mockBooksService.getBreadcrumb.mockResolvedValue('Test Category');
+
+      const result = await controller.findOne('1');
+
+      expect(result).toEqual({
+        ...mockBook,
+        breadcrumb: 'Test Category',
+      });
+      expect(mockBooksService.findOne).toHaveBeenCalledWith('1');
+      expect(mockBooksService.getBreadcrumb).toHaveBeenCalledWith(mockBook);
+    });
+  });
 });

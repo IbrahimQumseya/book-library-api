@@ -16,6 +16,7 @@ describe('CategoriesController', () => {
     parent: null,
     children: [],
     books: [],
+    parentId: null,
   };
 
   const mockCategoryService: Partial<CategoriesService> = {
@@ -154,6 +155,4 @@ describe('CategoriesController', () => {
       );
     });
   });
-
-  // Add more tests here...
 });
