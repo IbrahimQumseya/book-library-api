@@ -1,0 +1,153 @@
+{
+    "info": {
+        "name": "Book Library API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Categories",
+            "item": [
+                {
+                    "name": "Create Category",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{baseUrl}}/categories",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Fiction\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Create Subcategory",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{baseUrl}}/categories",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Mystery\",\n    \"parentId\": \"{{fictionCategoryId}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Categories",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/categories"
+                    }
+                },
+                {
+                    "name": "Get Category by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/categories/{{categoryId}}"
+                    }
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{baseUrl}}/categories/{{categoryId}}",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Fiction\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Category",
+                    "request": {
+                        "method": "DELETE",
+                        "url": "{{baseUrl}}/categories/{{categoryId}}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Books",
+            "item": [
+                {
+                    "name": "Create Book",
+                    "request": {
+                        "method": "POST",
+                        "url": "{{baseUrl}}/books",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"The Great Mystery\",\n    \"categoryId\": \"{{mysteryCategoryId}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Books",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/books"
+                    }
+                },
+                {
+                    "name": "Get Book by ID",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/books/{{bookId}}"
+                    }
+                },
+                {
+                    "name": "Get Books by Category",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{baseUrl}}/books?categoryId={{categoryId}}"
+                    }
+                },
+                {
+                    "name": "Update Book",
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{baseUrl}}/books/{{bookId}}",
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Updated Book Title\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Book",
+                    "request": {
+                        "method": "DELETE",
+                        "url": "{{baseUrl}}/books/{{bookId}}"
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000"
+        }
+    ]
+}
