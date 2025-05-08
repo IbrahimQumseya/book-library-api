@@ -17,8 +17,6 @@ describe('Books Integration Tests', () => {
   let bookId: string;
 
   beforeAll(async () => {
-    jest.setTimeout(30000);
-
     moduleFixture = await Test.createTestingModule({
       imports: [
         TestConfigModule,
